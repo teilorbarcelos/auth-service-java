@@ -1,9 +1,9 @@
-.PHONY: dev test coverage generate storage-driver build lint clean infra-up infra-down infra-logs check-infra metrics-up metrics-stop metrics-down
+.PHONY: dev test coverage build lint clean infra-up infra-down infra-clean infra-logs check-infra sonar
 
 # Standardized commands
 dev:
 	docker compose -f docker-compose.dev.yml up -d
-	./mvnw quarkus:dev -Dquarkus.http.port=8888 -Dquarkus.http.test-port=8891 -Dquarkus.http.host=0.0.0.0; \
+	./mvnw quarkus:dev -Dquarkus.http.port=8001 -Dquarkus.http.test-port=8002 -Dquarkus.http.host=0.0.0.0; \
 	docker compose -f docker-compose.dev.yml down
 
 check-infra:
@@ -15,14 +15,6 @@ test: check-infra
 coverage: check-infra
 	./mvnw clean verify -DforkCount=1 -DreuseForks=true -Dnet.bytebuddy.experimental=true
 	@python3 scripts/check-coverage.py
-
-# Example: make generate name=Product
-generate:
-	python3 scripts/generate_module.py $(name)
-
-# Example: make storage-driver name=s3
-storage-driver:
-	@python3 scripts/generate_storage.py $(name)
 
 # Helper / Infrastructure commands
 build:
@@ -46,15 +38,9 @@ infra-clean:
 infra-logs:
 	docker compose -f docker-compose.dev.yml logs -f
 
-# Métricas (Prometheus & Grafana)
-metrics-up:
-	@echo "📈 Subindo stack de métricas (Prometheus & Grafana)..."
-	docker compose -f docker-compose.metrics.yml up -d
-
-metrics-stop:
-	@echo "🛑 Parando stack de métricas..."
-	docker compose -f docker-compose.metrics.yml stop
-
-metrics-down:
-	@echo "🗑️ Removendo stack de métricas..."
-	docker compose -f docker-compose.metrics.yml down
+sonar:
+	@echo "📡 Subindo Redis (necessário para testes)..."
+	@docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'auth_service_java_dev_redis' || \
+		docker compose -f docker-compose.dev.yml up -d redis
+	@echo "🔍 Rodando scan do SonarQube..."
+	./scripts/sonar-scan.sh "auth-service-java" "Auth Service Java"
