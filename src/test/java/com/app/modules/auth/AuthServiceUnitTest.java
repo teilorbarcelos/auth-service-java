@@ -2,7 +2,6 @@ package com.app.modules.auth;
 
 import com.app.core.exception.BadRequestException;
 import com.app.infrastructure.auth.JwtService;
-import com.app.infrastructure.email.EmailProvider;
 import com.app.modules.auth.dto.AuthResponseDTO;
 import com.app.modules.user.UserModel;
 import com.app.modules.user.UserRepository;
@@ -28,7 +27,6 @@ public class AuthServiceUnitTest {
     private AuthService authService;
     private JwtService jwtService;
     private UserRepository userRepository;
-    private EmailProvider emailProvider;
     private EntityManager em;
     private ObjectMapper objectMapper;
 
@@ -36,14 +34,12 @@ public class AuthServiceUnitTest {
     void setup() {
         jwtService = mock(JwtService.class);
         userRepository = mock(UserRepository.class);
-        emailProvider = mock(EmailProvider.class);
         em = mock(EntityManager.class);
         objectMapper = new ObjectMapper();
 
         authService = new AuthService();
         authService.jwtService = jwtService;
         authService.userRepository = userRepository;
-        authService.emailProvider = emailProvider;
         authService.em = em;
         authService.objectMapper = objectMapper;
     }
@@ -66,11 +62,11 @@ public class AuthServiceUnitTest {
         when(userRepository.findByEmail("test@test.com")).thenReturn(user);
         when(em.find(AuthModel.class, "123")).thenReturn(auth);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
-        
+
         com.app.modules.role.RoleFeatureModel rf = new com.app.modules.role.RoleFeatureModel();
         rf.setIdFeature("f1");
         rf.setPermissions("{\"view\": true, \"create\": true}");
@@ -85,28 +81,25 @@ public class AuthServiceUnitTest {
 
     @Test
     void testLogin_Failures() {
-        // Blank/Null
         assertThrows(BadRequestException.class, () -> authService.login(null, "pass"));
         assertThrows(BadRequestException.class, () -> authService.login(" ", "pass"));
         assertThrows(BadRequestException.class, () -> authService.login("e", null));
         assertThrows(BadRequestException.class, () -> authService.login("e", " "));
-        
-        // Credentials
+
         when(userRepository.findByEmail(anyString())).thenReturn(null);
         assertThrows(WebApplicationException.class, () -> authService.login("w", "p"));
-        
+
         UserModel user = new UserModel();
         user.setId("1");
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(null);
         assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
-        
+
         AuthModel auth = new AuthModel();
         auth.setPassword(BCrypt.hashpw("p", BCrypt.gensalt()));
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
         assertThrows(WebApplicationException.class, () -> authService.login("e", "wrong"));
-        
-        // Disabled
+
         user.setActive(false);
         assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
     }
@@ -117,7 +110,7 @@ public class AuthServiceUnitTest {
         user.setId("1");
         user.setEmail("e");
         user.setActive(true);
-        
+
         com.app.modules.role.RoleModel role = new com.app.modules.role.RoleModel();
         role.setActive(false);
         user.setRole(role);
@@ -139,7 +132,7 @@ public class AuthServiceUnitTest {
         user.setId("1");
         user.setEmail("e");
         user.setActive(true);
-        user.setRole(null); 
+        user.setRole(null);
 
         AuthModel auth = new AuthModel();
         auth.setPassword(BCrypt.hashpw("p", BCrypt.gensalt()));
@@ -147,7 +140,7 @@ public class AuthServiceUnitTest {
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -162,7 +155,7 @@ public class AuthServiceUnitTest {
         user.setId("1");
         user.setEmail("e");
         user.setActive(true);
-        
+
         com.app.modules.role.RoleModel role = new com.app.modules.role.RoleModel();
         role.setActive(true);
         user.setRole(role);
@@ -173,7 +166,7 @@ public class AuthServiceUnitTest {
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -189,7 +182,7 @@ public class AuthServiceUnitTest {
         user.setIdRole("r");
         when(userRepository.findById("1")).thenReturn(user);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -207,7 +200,7 @@ public class AuthServiceUnitTest {
         user.setIdRole(null);
         when(userRepository.findById("1")).thenReturn(user);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -222,7 +215,7 @@ public class AuthServiceUnitTest {
         UserModel user = new UserModel();
         user.setId("1");
         user.setIdRole("r1");
-        
+
         com.app.modules.role.RoleModel role = new com.app.modules.role.RoleModel();
         role.setName("Role with null desc");
         role.setDescription(null);
@@ -230,7 +223,7 @@ public class AuthServiceUnitTest {
 
         when(userRepository.findById("1")).thenReturn(user);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -255,7 +248,7 @@ public class AuthServiceUnitTest {
         user.setIdRole("r1");
         when(userRepository.findById("1")).thenReturn(user);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
-        
+
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
@@ -278,23 +271,36 @@ public class AuthServiceUnitTest {
     }
 
     @Test
+    void testLogout_Success() {
+        doNothing().when(jwtService).deleteSessionVersion("1");
+        authService.logout("1");
+        verify(jwtService).deleteSessionVersion("1");
+    }
+
+    @Test
+    void testLogout_NullId() {
+        authService.logout(null);
+        verify(jwtService, never()).deleteSessionVersion(anyString());
+    }
+
+    @Test
     void testRequestPasswordReset_Workflow() {
         when(userRepository.findByEmail("none")).thenReturn(null);
-        authService.requestPasswordReset("none");
-        
+        assertNull(authService.requestPasswordReset("none"));
+
         UserModel user = new UserModel();
         user.setId("1");
         user.setName("John");
         user.setEmail("e");
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(null);
-        authService.requestPasswordReset("e");
-        
+        assertNull(authService.requestPasswordReset("e"));
+
         AuthModel auth = new AuthModel();
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
-        authService.requestPasswordReset("e");
+        String token = authService.requestPasswordReset("e");
+        assertNotNull(token);
         assertNotNull(auth.getRequestPasswordToken());
-        verify(emailProvider).sendEmail(eq("e"), anyString(), anyString());
     }
 
     @Test
@@ -307,17 +313,15 @@ public class AuthServiceUnitTest {
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
 
-        // Validation
         assertTrue(authService.validateResetToken("e", "123"));
         assertThrows(WebApplicationException.class, () -> authService.validateResetToken("e", "wrong"));
-        
+
         auth.setRequestPasswordExpiration(java.time.LocalDateTime.now().minusHours(1));
         assertThrows(WebApplicationException.class, () -> authService.validateResetToken("e", "123"));
-        
+
         auth.setRequestPasswordExpiration(null);
         assertTrue(authService.validateResetToken("e", "123"));
 
-        // Execution
         auth.setRequestPasswordExpiration(java.time.LocalDateTime.now().plusHours(1));
         authService.resetPassword("e", "123", "new");
         assertNull(auth.getRequestPasswordToken());
@@ -328,17 +332,16 @@ public class AuthServiceUnitTest {
     void testResetPassword_Failures() {
         when(userRepository.findByEmail("none")).thenReturn(null);
         assertThrows(WebApplicationException.class, () -> authService.validateResetToken("none", "t"));
-        
+
         UserModel user = new UserModel();
         user.setId("1");
         when(userRepository.findByEmail("e")).thenReturn(user);
         when(em.find(AuthModel.class, "1")).thenReturn(null);
         assertThrows(WebApplicationException.class, () -> authService.validateResetToken("e", "t"));
-        
+
         AuthModel auth = new AuthModel();
         auth.setRequestPasswordToken("123");
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
-        // Test null token input
         assertThrows(WebApplicationException.class, () -> authService.validateResetToken("e", null));
     }
 
@@ -350,12 +353,10 @@ public class AuthServiceUnitTest {
         auth.setRequestPasswordToken("123");
         auth.setRequestPasswordExpiration(java.time.LocalDateTime.now().plusHours(1));
 
-        // Case 1: user becomes null after validation
         when(userRepository.findByEmail("e")).thenReturn(user, (UserModel) null);
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
         assertThrows(WebApplicationException.class, () -> authService.resetPassword("e", "123", "new"));
 
-        // Case 2: auth becomes null after validation
         reset(userRepository);
         reset(em);
         when(userRepository.findByEmail("e")).thenReturn(user, user);
@@ -370,33 +371,32 @@ public class AuthServiceUnitTest {
         jakarta.persistence.TypedQuery query = mock(jakarta.persistence.TypedQuery.class);
         when(em.createQuery(anyString(), any())).thenReturn(query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
-        
+
         com.app.modules.role.RoleFeatureModel rf1 = new com.app.modules.role.RoleFeatureModel();
         rf1.setIdFeature("f1");
         rf1.setPermissions("{\"view\": true, \"create\": false, \"delete\": null}");
-        
+
         com.app.modules.role.RoleFeatureModel rf2 = new com.app.modules.role.RoleFeatureModel();
         rf2.setIdFeature("f2");
         rf2.setPermissions(null);
-        
+
         com.app.modules.role.RoleFeatureModel rf3 = new com.app.modules.role.RoleFeatureModel();
         rf3.setIdFeature("f3");
         rf3.setPermissions("invalid");
 
         com.app.modules.role.RoleFeatureModel rf4 = new com.app.modules.role.RoleFeatureModel();
         rf4.setIdFeature("f4");
-        rf4.setPermissions("null"); // ObjectMapper might return null
-        
+        rf4.setPermissions("null");
+
         when(query.getResultList()).thenReturn(List.of(rf1, rf2, rf3, rf4));
-        
+
         user.setId("1");
         when(userRepository.findById("1")).thenReturn(user);
         when(jwtService.createTokenPair(anyString(), any())).thenReturn(Map.of("token", "t", "refreshToken", "r"));
 
         AuthResponseDTO resp = authService.getMe("1");
         assertEquals(4, resp.getUser().getRole().getPermissions().size());
-        
-        // Verify rf4 (null perms from JSON "null") results in false for all bits
+
         Map<String, Object> p4 = resp.getUser().getRole().getPermissions().get(3);
         assertEquals(false, p4.get("view"));
     }
@@ -413,7 +413,7 @@ public class AuthServiceUnitTest {
         auth.setRequestPasswordExpiration(null);
         auth.setCreatedAt(null);
         auth.setUpdatedAt(null);
-        
+
         assertEquals("1", auth.getId());
         assertEquals("p", auth.getPassword());
         assertEquals(5, auth.getRetries());
@@ -437,21 +437,21 @@ public class AuthServiceUnitTest {
         dto.setValid(true);
         dto.setToken("t");
         dto.setRefreshToken("r");
-        
+
         AuthResponseDTO.UserData user = new AuthResponseDTO.UserData();
         user.setId("u1");
         user.setName("n");
         user.setEmail("e");
-        
+
         AuthResponseDTO.RoleData role = new AuthResponseDTO.RoleData();
         role.setId("r1");
         role.setName("rn");
         role.setDescription("rd");
         role.setPermissions(new ArrayList<>());
-        
+
         user.setRole(role);
         dto.setUser(user);
-        
+
         assertEquals("m", dto.getMessage());
         assertTrue(dto.isValid());
         assertEquals("t", dto.getToken());

@@ -3,7 +3,6 @@ package com.app.core;
 import com.app.core.dto.ErrorResponse;
 import com.app.core.dto.PaginatedResponse;
 import com.app.modules.RootResource;
-import com.app.modules.debug.DebugResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
@@ -21,21 +20,13 @@ public class MiscTest {
     @Inject
     RootResource rootResource;
 
-    @Inject
-    DebugResource debugResource;
-
     @Test
     @SuppressWarnings("unchecked")
     void testRootResource() {
         Response response = rootResource.root();
         assertEquals(200, response.getStatus());
         Map<String, String> entity = (Map<String, String>) response.getEntity();
-        assertEquals("Backend Java Quarkus", entity.get("name"));
-    }
-
-    @Test
-    void testDebugResource() {
-        assertThrows(RuntimeException.class, () -> debugResource.triggerError());
+        assertEquals("Auth Service Java", entity.get("name"));
     }
 
     @Test
@@ -57,12 +48,12 @@ public class MiscTest {
         assertEquals(1, resp.getPage());
         assertEquals(10, resp.getSize());
         assertEquals(100, resp.getTotal());
-        
+
         resp.setItems(List.of("b"));
         resp.setPage(2);
         resp.setSize(20);
         resp.setTotal(200);
-        
+
         assertEquals("b", resp.getItems().get(0));
         assertEquals(2, resp.getPage());
         assertEquals(20, resp.getSize());
@@ -71,7 +62,6 @@ public class MiscTest {
 
     @Test
     void testBaseEntity() {
-        // Since BaseEntity is abstract, we test it through a subclass or directly if possible
         BaseEntity entity = new BaseEntity() {};
         entity.setId("test-id");
         LocalDateTime now = LocalDateTime.now();

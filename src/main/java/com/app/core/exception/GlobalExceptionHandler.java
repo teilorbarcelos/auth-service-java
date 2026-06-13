@@ -8,36 +8,15 @@ import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 import org.jboss.logging.Logger;
 
-/**
- * Global exception handler for all REST endpoints.
- * Equivalent to JsonErrorMiddleware.php — catches all exceptions and returns
- * structured JSON.
- */
+import java.util.Map;
+
 @Provider
 public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
 
     private static final Logger LOG = Logger.getLogger(GlobalExceptionHandler.class);
 
-    @jakarta.inject.Inject
-    com.app.modules.audit.AuditService auditService;
-
-    @jakarta.inject.Inject
-    com.app.infrastructure.metrics.MetricService metricService;
-
     @Override
     public Response toResponse(Throwable exception) {
-        metricService.incrementCounter("jvm_exceptions", "type", exception.getClass().getSimpleName());
-
-        boolean shouldLog = !(exception instanceof WebApplicationException wae && wae.getResponse().getStatus() == 404);
-
-        if (shouldLog) {
-            try {
-                auditService.logError(exception, null);
-            } catch (Exception e) {
-                LOG.error("Failed to log error to audit service", e);
-            }
-        }
-
         if (exception instanceof ValidationException ve) {
             LOG.warnv("Validation error: {0}", ve.getErrors());
             return Response.status(400)
@@ -57,7 +36,7 @@ public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
             LOG.warnv("HTTP error {0}: {1}", status, wae.getMessage());
             if (status == 401) {
                 return Response.status(status)
-                        .entity(java.util.Map.of("error", "UnauthorizedError"))
+                        .entity(Map.of("error", "UnauthorizedError"))
                         .build();
             }
             return Response.status(status)
@@ -73,7 +52,6 @@ public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
         }
 
         LOG.errorv(exception, "Unhandled exception: {0}", exception.getMessage());
-        exception.printStackTrace();
 
         int statusCode = 500;
         String message = exception.getMessage();

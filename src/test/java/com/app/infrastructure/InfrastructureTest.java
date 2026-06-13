@@ -7,7 +7,6 @@ import com.app.infrastructure.auth.AuthFilter;
 import com.app.infrastructure.auth.Authenticated;
 import com.app.infrastructure.auth.PermissionFilter;
 import com.app.infrastructure.auth.RequiresPermission;
-import com.app.modules.audit.AuditService;
 import io.quarkus.redis.datasource.RedisDataSource;
 import io.quarkus.redis.datasource.keys.KeyCommands;
 import io.quarkus.redis.datasource.value.ValueCommands;
@@ -48,9 +47,6 @@ public class InfrastructureTest {
 
     @Inject
     UserSession userSession;
-
-    @InjectMock
-    AuditService auditService;
 
     @InjectMock
     RedisDataSource redisDataSource;

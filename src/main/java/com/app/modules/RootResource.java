@@ -22,7 +22,7 @@ public class RootResource {
     @GET
     public Response root() {
         return Response.ok(Map.of(
-                "name", "Backend Java Quarkus",
+                "name", "Auth Service Java",
                 "version", version,
                 "message", "API is running"
         )).build();

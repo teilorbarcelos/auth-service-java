@@ -4,7 +4,7 @@ Roadmap para extrair a autenticação do monolito `backend-java-quarkus` em um m
 
 > **Convenção desta lista**
 > - Cada **fase** gera um commit próprio no `auth-service-java`. A **Fase 5** é o único commit previsto no `backend-java-quarkus`.
-> - A **bateria completa de testes** (unit, cobertura 100%, compliance e2e e Sonar) só roda na **Fase 6** — durante o caminho, cada fase valida com `./mvnw compile` e um smoke test manual.
+> - A **bateria completa de testes** (unit, cobertura 100%, compliance e2e e Sonar q está na porta 9000) só roda na **Fase 6** — durante o caminho, cada fase valida com `./mvnw compile` e um smoke test manual.
 > - Tudo aqui respeita **SOLID, DRY e clean code**: reuso integral de `src/main/java/com/app/infrastructure/auth/*` (`JwtService`, `AuthFilter`, `PermissionFilter`, `UserSession`, `SecurityDynamicFeature`), `src/main/java/com/app/infrastructure/seed/DatabaseBootstrap`, `src/main/java/com/app/core/*`, `src/main/java/com/app/modules/auth/*` — zero duplicação com o monólito. A interface HTTP e a forma do JWT são idênticas às do `backend-java-quarkus`, então o `AuthFilter` do monólito aceita tokens do service sem mudar uma linha.
 > - O `backend-java-quarkus` já exige **100% de cobertura** (JaCoCo BUNDLE INSTRUCTION + BRANCH 1.00) — o auth-service-java herda esse mesmo limite.
 

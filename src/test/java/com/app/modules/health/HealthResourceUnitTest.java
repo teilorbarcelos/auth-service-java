@@ -19,8 +19,6 @@ public class HealthResourceUnitTest {
     private EntityManager em;
     private RedisDataSource redisDataSource;
     private ValueCommands<String, String> valueCommands;
-    private com.app.infrastructure.messaging.RabbitMQProvider rabbitMQProvider;
-    private com.app.infrastructure.storage.StorageProvider storageProvider;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -28,23 +26,12 @@ public class HealthResourceUnitTest {
         em = mock(EntityManager.class);
         redisDataSource = mock(RedisDataSource.class);
         valueCommands = mock(ValueCommands.class);
-        
+
         when(redisDataSource.value(eq(String.class))).thenReturn(valueCommands);
-        
-        
-        rabbitMQProvider = mock(com.app.infrastructure.messaging.RabbitMQProvider.class);
-        when(rabbitMQProvider.isEnabled()).thenReturn(false);
 
         healthResource = new HealthResource();
         healthResource.em = em;
         healthResource.redisDataSource = redisDataSource;
-        healthResource.rabbitMQProvider = rabbitMQProvider;
-        
-        storageProvider = mock(com.app.infrastructure.storage.StorageProvider.class);
-        when(storageProvider.checkHealth()).thenReturn(true);
-        when(storageProvider.getActiveDisk()).thenReturn("local");
-        healthResource.storageProvider = storageProvider;
-
         healthResource.appVersion = "1.0.0";
     }
 
@@ -72,7 +59,7 @@ public class HealthResourceUnitTest {
         assertEquals(503, response.getStatus());
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
         assertEquals("DEGRADED", data.get("status"));
-        
+
         Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
         assertEquals("ERROR", checks.get("database").get("status"));
         assertEquals("DB Connection Failed", checks.get("database").get("message"));
@@ -90,7 +77,7 @@ public class HealthResourceUnitTest {
         assertEquals(503, response.getStatus());
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
         assertEquals("DEGRADED", data.get("status"));
-        
+
         Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
         assertEquals("ERROR", checks.get("redis").get("status"));
         assertEquals("Redis Connection Failed", checks.get("redis").get("message"));
@@ -98,7 +85,6 @@ public class HealthResourceUnitTest {
 
     @Test
     void testGetUptime() {
-        // This is implicit in the other tests, but helps coverage of the logic
         Response response = healthResource.health();
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
         assertNotNull(data.get("uptime"));
@@ -106,72 +92,34 @@ public class HealthResourceUnitTest {
     }
 
     @Test
-    void testHealth_RabbitMQ_UP() {
-        when(rabbitMQProvider.isEnabled()).thenReturn(true);
-        when(rabbitMQProvider.isConnected()).thenReturn(true);
-        // Mock DB and Redis as UP
-        Query query = mock(Query.class);
-        when(em.createNativeQuery(anyString())).thenReturn(query);
-        when(query.getSingleResult()).thenReturn(1);
-        when(valueCommands.get(anyString())).thenReturn(null);
-
-        Response response = healthResource.health();
-
+    void testLiveness() {
+        Response response = healthResource.liveness();
         assertEquals(200, response.getStatus());
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
-        Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
-        assertEquals("OK", checks.get("rabbitmq").get("status"));
-        assertEquals("Connected", checks.get("rabbitmq").get("message"));
-        verify(rabbitMQProvider).isConnected();
+        assertEquals("alive", data.get("status"));
     }
 
     @Test
-    void testHealth_RabbitMQ_Down() {
-        when(rabbitMQProvider.isEnabled()).thenReturn(true);
-        when(rabbitMQProvider.isConnected()).thenReturn(false);
-        
-        // Mock DB and Redis as UP
+    void testReadiness_UP() {
         Query query = mock(Query.class);
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
         when(valueCommands.get(anyString())).thenReturn(null);
 
-        Response response = healthResource.health();
-
-        assertEquals(503, response.getStatus());
+        Response response = healthResource.readiness();
+        assertEquals(200, response.getStatus());
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
-        assertEquals("DEGRADED", data.get("status"));
-        
-        Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
-        assertEquals("ERROR", checks.get("rabbitmq").get("status"));
-        assertEquals("Rabbit Connection Failed", checks.get("rabbitmq").get("message"));
+        assertEquals("UP", data.get("status"));
     }
 
     @Test
-    void testHealth_StorageDown() {
-        when(storageProvider.checkHealth()).thenReturn(false);
-        when(storageProvider.getActiveDisk()).thenReturn("local");
+    void testReadiness_DOWN() {
+        when(em.createNativeQuery(anyString())).thenThrow(new RuntimeException("DB Down"));
 
-        Response response = healthResource.health();
-
+        Response response = healthResource.readiness();
         assertEquals(503, response.getStatus());
         Map<String, Object> data = (Map<String, Object>) response.getEntity();
-        assertEquals("DEGRADED", data.get("status"));
-
-        Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
-        assertEquals("ERROR", checks.get("storage").get("status"));
-        assertTrue(checks.get("storage").get("message").contains("not writable"));
-    }
-
-    @Test
-    void testHealth_StorageException() {
-        when(storageProvider.checkHealth()).thenThrow(new RuntimeException("Storage Error"));
-
-        Response response = healthResource.health();
-
-        Map<String, Object> data = (Map<String, Object>) response.getEntity();
-        Map<String, Map<String, String>> checks = (Map<String, Map<String, String>>) data.get("checks");
-        assertEquals("ERROR", checks.get("storage").get("status"));
-        assertEquals("Storage Error", checks.get("storage").get("message"));
+        assertEquals((int) Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), response.getStatus());
+        assertEquals("UP", data.get("status"));
     }
 }
