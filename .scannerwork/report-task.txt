@@ -1,0 +1,6 @@
+projectKey=backend-java-quarkus
+serverUrl=http://localhost:9000
+serverVersion=10.5.1.90531
+dashboardUrl=http://localhost:9000/dashboard?id=backend-java-quarkus
+ceTaskId=16440b73-b139-4fef-b009-c11e16e87a5c
+ceTaskUrl=http://localhost:9000/api/ce/task?id=16440b73-b139-4fef-b009-c11e16e87a5c

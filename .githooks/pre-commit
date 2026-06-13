@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Verificando build e cobertura (100%) antes do commit..."
+./mvnw verify -Dnet.bytebuddy.experimental=true

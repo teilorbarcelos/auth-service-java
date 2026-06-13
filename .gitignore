@@ -1,0 +1,31 @@
+# Build output
+target/
+
+# Maven wrapper downloaded files
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Quarkus
+.quarkus/
+
+# Environment
+.env
+
+# IA tools
+run_tests.sh
+test_output.txt
+patch_pom.py
+fix_sonar.py
+fix_sonar_constants.py
+TODO.md
