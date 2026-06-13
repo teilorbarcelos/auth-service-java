@@ -78,4 +78,26 @@ public class GlobalExceptionHandlerUnitTest {
         ErrorResponse err = (ErrorResponse) response.getEntity();
         assertEquals("INTERNAL_SERVER_ERROR", err.getError().getCode());
     }
+
+    @Test
+    void testGenericExceptionWithNullMessage() {
+        RuntimeException re = new RuntimeException((String) null);
+        Response response = exceptionHandler.toResponse(re);
+
+        assertEquals(500, response.getStatus());
+        ErrorResponse err = (ErrorResponse) response.getEntity();
+        assertEquals("Internal Server Error", err.getError().getMessage());
+        assertEquals("INTERNAL_SERVER_ERROR", err.getError().getCode());
+    }
+
+    @Test
+    void testGenericExceptionWithBlankMessage() {
+        RuntimeException re = new RuntimeException("   ");
+        Response response = exceptionHandler.toResponse(re);
+
+        assertEquals(500, response.getStatus());
+        ErrorResponse err = (ErrorResponse) response.getEntity();
+        assertEquals("Internal Server Error", err.getError().getMessage());
+        assertEquals("INTERNAL_SERVER_ERROR", err.getError().getCode());
+    }
 }

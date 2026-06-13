@@ -102,4 +102,60 @@ public class BaseRepositoryTest {
         var instance = constructor.newInstance();
         assertNotNull(instance);
     }
+
+    @Test
+    @DisplayName("Should search all without pagination")
+    @Transactional
+    public void testSearchAll() {
+        var itemsAsc = repository.searchAll(em, UserModel.class,
+                new QueryFilter(0, 10, List.of(), List.of(), "name", "asc"));
+        assertNotNull(itemsAsc);
+
+        var itemsDesc = repository.searchAll(em, UserModel.class,
+                new QueryFilter(0, 10, List.of(), List.of(), "name", "desc"));
+        assertNotNull(itemsDesc);
+    }
+
+    @Test
+    @DisplayName("Should soft delete an existing entity")
+    @Transactional
+    public void testSoftDelete() {
+        UserModel admin = repository.findByEmail("admin@email.com");
+        assertNotNull(admin);
+
+        boolean deleted = repository.softDelete(admin.getId());
+        assertTrue(deleted);
+
+        UserModel reloaded = repository.findById(admin.getId());
+        assertNotNull(reloaded);
+        assertFalse(reloaded.getActive());
+        assertTrue(reloaded.getIsDeleted());
+        assertNotNull(reloaded.getDeletedAt());
+
+        em.flush();
+
+        boolean deletedAgain = repository.softDelete("non-existent-id");
+        assertFalse(deletedAgain);
+    }
+
+    @Test
+    @DisplayName("Should toggle active status")
+    @Transactional
+    public void testSetStatus() {
+        UserModel admin = repository.findByEmail("admin@email.com");
+        assertNotNull(admin);
+
+        UserModel deactivated = repository.setStatus(admin.getId(), false);
+        assertNotNull(deactivated);
+        assertFalse(deactivated.getActive());
+
+        em.flush();
+
+        UserModel reactivated = repository.setStatus(admin.getId(), true);
+        assertNotNull(reactivated);
+        assertTrue(reactivated.getActive());
+
+        UserModel notFound = repository.setStatus("non-existent-id", true);
+        assertNull(notFound);
+    }
 }

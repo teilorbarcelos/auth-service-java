@@ -102,6 +102,13 @@ public class AuthServiceUnitTest {
 
         user.setActive(false);
         assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
+
+        user.setActive(true);
+        auth.setActive(null);
+        assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
+
+        auth.setActive(false);
+        assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
     }
 
     @Test

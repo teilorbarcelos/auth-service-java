@@ -122,4 +122,18 @@ public class HealthResourceUnitTest {
         assertEquals((int) Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), response.getStatus());
         assertEquals("UP", data.get("status"));
     }
+
+    @Test
+    void testReadiness_RedisDown() {
+        Query query = mock(Query.class);
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(valueCommands.get(anyString())).thenThrow(new RuntimeException("Redis Down"));
+
+        Response response = healthResource.readiness();
+        assertEquals(503, response.getStatus());
+        Map<String, Object> data = (Map<String, Object>) response.getEntity();
+        assertFalse((Boolean) data.get("redis"));
+        assertTrue((Boolean) data.get("database"));
+    }
 }

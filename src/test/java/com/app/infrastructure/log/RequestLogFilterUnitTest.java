@@ -65,6 +65,17 @@ public class RequestLogFilterUnitTest {
     }
 
     @Test
+    @DisplayName("Should handle userId property in response filter")
+    void testFilterWithUserId() {
+        when(requestContext.getProperty("request-start-time")).thenReturn(System.nanoTime());
+        when(requestContext.getProperty("request-id")).thenReturn("test-id");
+        when(requestContext.getProperty("userId")).thenReturn("user-123");
+
+        filter.filter(requestContext, responseContext);
+        verify(headers).putSingle("X-Request-ID", "test-id");
+    }
+
+    @Test
     @DisplayName("Should extract client IP from X-Forwarded-For")
     void testGetClientIp() {
         when(requestContext.getHeaderString("X-Forwarded-For")).thenReturn("1.2.3.4, 5.6.7.8");
