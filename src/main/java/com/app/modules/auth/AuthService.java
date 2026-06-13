@@ -38,6 +38,8 @@ public class AuthService {
     @Inject
     ObjectMapper objectMapper;
 
+    private static final String ERROR_INVALID_CREDENTIALS = "Invalid email or password";
+
     @Transactional
     public AuthResponseDTO login(String email, String password) {
         if (email == null || email.isBlank() || password == null || password.isBlank()) {
@@ -45,21 +47,18 @@ public class AuthService {
         }
 
         UserModel user = userRepository.findByEmail(email);
-        if (user == null) {
-            throw new WebApplicationException("Invalid credentials", Response.Status.UNAUTHORIZED);
-        }
+        AuthModel auth = user != null ? em.find(AuthModel.class, user.getId()) : null;
 
-        AuthModel auth = em.find(AuthModel.class, user.getId());
         if (auth == null || !BCrypt.checkpw(password, auth.getPassword())) {
-            throw new WebApplicationException("Invalid credentials", Response.Status.UNAUTHORIZED);
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
-        if (!user.getActive()) {
-            throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
+        if (!user.getActive() || auth.getActive() == null || !auth.getActive()) {
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
         if (user.getRole() != null && !user.getRole().getActive()) {
-            throw new WebApplicationException("Role is disabled", Response.Status.FORBIDDEN);
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
         return buildAuthResponse(user, "Login successful");

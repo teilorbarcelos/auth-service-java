@@ -122,8 +122,7 @@ public class AuthServiceUnitTest {
         when(em.find(AuthModel.class, "1")).thenReturn(auth);
 
         WebApplicationException ex = assertThrows(WebApplicationException.class, () -> authService.login("e", "p"));
-        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), ex.getResponse().getStatus());
-        assertEquals("Role is disabled", ex.getMessage());
+        assertEquals(401, ex.getResponse().getStatus());
     }
 
     @Test
