@@ -3,8 +3,6 @@ package com.app.modules.auth;
 import com.app.core.exception.BadRequestException;
 import com.app.infrastructure.auth.JwtService;
 import com.app.modules.auth.dto.AuthResponseDTO;
-import com.app.infrastructure.email.EmailProvider;
-import com.app.infrastructure.email.EmailTemplates;
 import com.app.modules.role.RoleFeatureModel;
 import com.app.modules.user.UserModel;
 import com.app.modules.user.UserRepository;
@@ -28,7 +26,6 @@ import java.util.*;
 public class AuthService {
     private static final String USER_NOT_FOUND = "User not found";
 
-
     @Inject
     JwtService jwtService;
 
@@ -36,13 +33,12 @@ public class AuthService {
     UserRepository userRepository;
 
     @Inject
-    EmailProvider emailProvider;
-
-    @Inject
     EntityManager em;
 
     @Inject
     ObjectMapper objectMapper;
+
+    private static final String ERROR_INVALID_CREDENTIALS = "Invalid email or password";
 
     @Transactional
     public AuthResponseDTO login(String email, String password) {
@@ -51,21 +47,18 @@ public class AuthService {
         }
 
         UserModel user = userRepository.findByEmail(email);
-        if (user == null) {
-            throw new WebApplicationException("Invalid credentials", Response.Status.UNAUTHORIZED);
-        }
+        AuthModel auth = user != null ? em.find(AuthModel.class, user.getId()) : null;
 
-        AuthModel auth = em.find(AuthModel.class, user.getId());
         if (auth == null || !BCrypt.checkpw(password, auth.getPassword())) {
-            throw new WebApplicationException("Invalid credentials", Response.Status.UNAUTHORIZED);
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
-        if (!user.getActive()) {
-            throw new WebApplicationException("Account is disabled", Response.Status.FORBIDDEN);
+        if (!user.getActive() || auth.getActive() == null || !auth.getActive()) {
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
         if (user.getRole() != null && !user.getRole().getActive()) {
-            throw new WebApplicationException("Role is disabled", Response.Status.FORBIDDEN);
+            throw new WebApplicationException(ERROR_INVALID_CREDENTIALS, Response.Status.UNAUTHORIZED);
         }
 
         return buildAuthResponse(user, "Login successful");
@@ -101,25 +94,28 @@ public class AuthService {
     }
 
     @Transactional
-    public void requestPasswordReset(String email) {
+    public void logout(String userId) {
+        if (userId != null) {
+            jwtService.deleteSessionVersion(userId);
+        }
+    }
+
+    @Transactional
+    public String requestPasswordReset(String email) {
         UserModel user = userRepository.findByEmail(email);
         if (user == null)
-            return;
+            return null;
 
         AuthModel auth = em.find(AuthModel.class, user.getId());
         if (auth == null)
-            return;
+            return null;
 
         String token = String.valueOf(100000 + new Random().nextInt(900000));
         auth.setRequestPasswordToken(token);
         auth.setRequestPasswordExpiration(LocalDateTime.now().plusMinutes(15));
         em.merge(auth);
 
-        String html = EmailTemplates.render(EmailTemplates.FORGOT_PASSWORD_TEMPLATE, Map.of(
-                "name", user.getName(),
-                "token", token));
-
-        emailProvider.sendEmail(email, "Recuperação de Senha", html);
+        return token;
     }
 
     @Transactional

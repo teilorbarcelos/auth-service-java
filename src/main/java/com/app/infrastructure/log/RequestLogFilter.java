@@ -1,8 +1,6 @@
 package com.app.infrastructure.log;
 
-import com.app.infrastructure.metrics.MetricService;
 import jakarta.annotation.Priority;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
@@ -15,10 +13,6 @@ import org.jboss.logging.MDC;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 
-/**
- * Structured request logging and metrics filter.
- * Equivalent to LogMiddleware.php
- */
 @Provider
 @Priority(Priorities.USER - 200)
 public class RequestLogFilter implements ContainerRequestFilter, ContainerResponseFilter {
@@ -29,9 +23,6 @@ public class RequestLogFilter implements ContainerRequestFilter, ContainerRespon
     private static final String REQUEST_ID_KEY = "request-id";
     private static final String USER_ID_KEY = "userId";
     private static final String NORMALIZED_PATH = "normalized-path";
-
-    @Inject
-    MetricService metricService;
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
@@ -73,15 +64,6 @@ public class RequestLogFilter implements ContainerRequestFilter, ContainerRespon
 
                 LOG.infov("Request processed | request_id={0} method={1} url={2} status={3} duration_ms={4} ip={5}",
                         requestId, method, normalizedPath, status, durationMs, clientIp);
-
-                metricService.incrementCounter("http_requests_total",
-                        "method", method,
-                        "status", String.valueOf(status),
-                        "path", normalizedPath);
-
-                metricService.recordTimer("http_request_duration_ms", durationMs,
-                        "method", method,
-                        "path", normalizedPath);
 
                 responseContext.getHeaders().putSingle("X-Request-ID", requestId);
             }

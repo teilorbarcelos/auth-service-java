@@ -22,7 +22,6 @@ import java.util.Map;
 public class AuthResource {
     private static final String EMAIL_KEY = "email";
 
-
     @Inject
     AuthService authService;
 
@@ -63,13 +62,22 @@ public class AuthResource {
     }
 
     @POST
+    @Path("/logout")
+    @Authenticated
+    @Operation(summary = "Logout", description = "Revokes the current session.")
+    public Response logout() {
+        String userId = userSession.getUserId();
+        authService.logout(userId);
+        return Response.ok(Map.of("message", "Logout realizado com sucesso!")).build();
+    }
+
+    @POST
     @Path("/password/request")
-    @Operation(summary = "Request password reset", description = "Sends an email with a reset token.")
-    @APIResponse(responseCode = "200", description = "Email sent")
+    @Operation(summary = "Request password reset", description = "Generates a reset token.")
     public Response requestPasswordReset(@RequestBody(content = @Content(schema = @Schema(implementation = AuthSchemas.PasswordRequest.class))) Map<String, String> body) {
         String email = body.getOrDefault(EMAIL_KEY, "");
-        authService.requestPasswordReset(email);
-        return Response.ok(Map.of("message", "E-mail de recuperação enviado com sucesso!")).build();
+        String token = authService.requestPasswordReset(email);
+        return Response.ok(Map.of("message", "If the email exists, a reset token has been generated", "resetToken", token)).build();
     }
 
     @POST
@@ -83,13 +91,20 @@ public class AuthResource {
     }
 
     @POST
-    @Path("/password/reset")
-    @Operation(summary = "Reset password")
-    public Response resetPassword(Map<String, String> body) {
+    @Path("/password/change")
+    @Operation(summary = "Change password", description = "Changes password using a valid reset token.")
+    public Response changePassword(Map<String, String> body) {
         String email = body.getOrDefault(EMAIL_KEY, "");
         String token = body.getOrDefault("token", "");
         String newPassword = body.getOrDefault("password", "");
         authService.resetPassword(email, token, newPassword);
         return Response.ok(Map.of("message", "Senha alterada com sucesso!")).build();
+    }
+
+    @GET
+    @Path("/.well-known/jwks.json")
+    @Operation(summary = "JWKS endpoint", description = "Returns public keys for JWT verification (placeholder).")
+    public Response jwks() {
+        return Response.ok(Map.of("keys", java.util.Collections.emptyList())).build();
     }
 }

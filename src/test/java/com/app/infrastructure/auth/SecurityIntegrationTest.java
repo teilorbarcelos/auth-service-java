@@ -14,24 +14,19 @@ public class SecurityIntegrationTest {
     public void testUnauthorized() {
         given()
                 .when()
-                .get("/v1/user")
+                .get("/v1/auth/me")
                 .then()
                 .statusCode(401);
     }
 
     @Test
-    @DisplayName("Should return 403 when user has no permission for feature")
+    @DisplayName("Should return 401 when invalid token is provided")
     public void testForbidden() {
-
-        // Try to access a restricted resource with an invalid token structure
-        // to trigger the filter. A more complete test would involve a real user token
-        // without the specific permission, but for coverage of the 403 branch:
-
         given()
                 .header("Authorization", "Bearer invalid_token")
                 .when()
-                .get("/v1/user")
+                .get("/v1/auth/me")
                 .then()
-                .statusCode(401); // Invalid token gives 401
+                .statusCode(401);
     }
 }

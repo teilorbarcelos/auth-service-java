@@ -18,16 +18,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Health check resource — verifies DB and Redis connectivity.
- * Equivalent to HealthController.php
- */
 @Path("/health")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Health")
 public class HealthResource implements HealthSchemas.Doc {
     private static final String CONNECTED = "Connected";
-
 
     private static final Logger LOG = Logger.getLogger(HealthResource.class);
 
@@ -36,12 +31,6 @@ public class HealthResource implements HealthSchemas.Doc {
 
     @Inject
     RedisDataSource redisDataSource;
-
-    @Inject
-    com.app.infrastructure.messaging.RabbitMQProvider rabbitMQProvider;
-
-    @Inject
-    com.app.infrastructure.storage.StorageProvider storageProvider;
 
     @ConfigProperty(name = "app.version", defaultValue = "1.0.0")
     String appVersion;
@@ -53,12 +42,10 @@ public class HealthResource implements HealthSchemas.Doc {
         Map<String, Map<String, String>> checks = new LinkedHashMap<>();
         checks.put("database", checkDatabase());
         checks.put("redis", checkRedis());
-        checks.put("rabbitmq", checkRabbitMQ());
-        checks.put("storage", checkStorage());
 
         for (Map.Entry<String, Map<String, String>> entry : checks.entrySet()) {
             String checkStatus = entry.getValue().get("status");
-            if (!"OK".equals(checkStatus) && !"DISABLED".equals(checkStatus)) {
+            if (!"OK".equals(checkStatus)) {
                 status = "DEGRADED";
                 LOG.warnv("System Health Degraded: {0} is down - {1}",
                         entry.getKey(), entry.getValue().get("message"));
@@ -71,9 +58,26 @@ public class HealthResource implements HealthSchemas.Doc {
         data.put("deploy", Map.of("version", appVersion));
         data.put("uptime", getUptime());
         data.put("checks", checks);
-        data.put("message", "API is running smoothly. All systems operational.");
 
         return Response.status("UP".equals(status) ? 200 : 503).entity(data).build();
+    }
+
+    @GET
+    @Path("/liveness")
+    public Response liveness() {
+        return Response.ok(Map.of("status", "alive", "uptime", ManagementFactory.getRuntimeMXBean().getUptime())).build();
+    }
+
+    @GET
+    @Path("/ready")
+    public Response readiness() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("status", "UP");
+        data.put("database", checkDatabase().get("status").equals("OK"));
+        data.put("redis", checkRedis().get("status").equals("OK"));
+
+        boolean ok = (boolean) data.get("database") && (boolean) data.get("redis");
+        return Response.status(ok ? 200 : 503).entity(data).build();
     }
 
     private Map<String, String> checkDatabase() {
@@ -89,28 +93,6 @@ public class HealthResource implements HealthSchemas.Doc {
         try {
             redisDataSource.value(String.class).get("health-check-ping");
             return Map.of("status", "OK", "message", CONNECTED);
-        } catch (Exception e) {
-            return Map.of("status", "ERROR", "message", e.getMessage());
-        }
-    }
-
-    private Map<String, String> checkRabbitMQ() {
-        if (!rabbitMQProvider.isEnabled()) {
-            return Map.of("status", "DISABLED", "message", "Messaging is disabled in settings");
-        }
-
-        if (rabbitMQProvider.isConnected()) {
-            return Map.of("status", "OK", "message", CONNECTED);
-        }
-        return Map.of("status", "ERROR", "message", "Rabbit Connection Failed");
-    }
-
-    private Map<String, String> checkStorage() {
-        try {
-            if (storageProvider.checkHealth()) {
-                return Map.of("status", "OK", "message", "Storage [" + storageProvider.getActiveDisk() + "] is healthy");
-            }
-            return Map.of("status", "ERROR", "message", "Storage [" + storageProvider.getActiveDisk() + "] is not writable");
         } catch (Exception e) {
             return Map.of("status", "ERROR", "message", e.getMessage());
         }

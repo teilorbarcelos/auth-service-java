@@ -30,7 +30,7 @@ public class AuthResourceUnitTest {
     void testLogin() {
         AuthResponseDTO dto = new AuthResponseDTO();
         when(authService.login("e", "p")).thenReturn(dto);
-        
+
         Response resp = authResource.login(Map.of("email", "e", "password", "p"));
         assertEquals(200, resp.getStatus());
         assertEquals(dto, resp.getEntity());
@@ -41,7 +41,7 @@ public class AuthResourceUnitTest {
         when(userSession.getUserId()).thenReturn("u1");
         AuthResponseDTO dto = new AuthResponseDTO();
         when(authService.getMe("u1")).thenReturn(dto);
-        
+
         Response resp = authResource.me();
         assertEquals(200, resp.getStatus());
         assertEquals(dto, resp.getEntity());
@@ -51,27 +51,43 @@ public class AuthResourceUnitTest {
     void testRefresh() {
         AuthResponseDTO dto = new AuthResponseDTO();
         when(authService.refreshToken("r1")).thenReturn(dto);
-        
+
         Response resp = authResource.refresh(Map.of("refreshToken", "r1"));
         assertEquals(200, resp.getStatus());
         assertEquals(dto, resp.getEntity());
     }
 
     @Test
+    void testLogout() {
+        when(userSession.getUserId()).thenReturn("u1");
+
+        Response resp = authResource.logout();
+        assertEquals(200, resp.getStatus());
+        verify(authService).logout("u1");
+    }
+
+    @Test
     void testPasswordFlows() {
-        // Request
+        when(authService.requestPasswordReset("e")).thenReturn("123456");
+
         Response r1 = authResource.requestPasswordReset(Map.of("email", "e"));
         assertEquals(200, r1.getStatus());
         verify(authService).requestPasswordReset("e");
-        
-        // Validate
+
         Response r2 = authResource.validateResetToken(Map.of("email", "e", "token", "t"));
         assertEquals(200, r2.getStatus());
         verify(authService).validateResetToken("e", "t");
-        
-        // Change
-        Response r3 = authResource.resetPassword(Map.of("email", "e", "token", "t", "password", "p"));
+
+        Response r3 = authResource.changePassword(Map.of("email", "e", "token", "t", "password", "p"));
         assertEquals(200, r3.getStatus());
         verify(authService).resetPassword("e", "t", "p");
+    }
+
+    @Test
+    void testJwks() {
+        Response resp = authResource.jwks();
+        assertEquals(200, resp.getStatus());
+        Map<String, Object> entity = (Map<String, Object>) resp.getEntity();
+        assertNotNull(entity.get("keys"));
     }
 }

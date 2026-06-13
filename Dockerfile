@@ -12,7 +12,7 @@ RUN chmod +x mvnw && ./mvnw package -DskipTests
 FROM eclipse-temurin:21.0.11_9-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/quarkus-app/ /app/quarkus-app/
-EXPOSE 8888
+EXPOSE 8001
 CMD java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 \
      -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError \
      -jar quarkus-app/quarkus-run.jar

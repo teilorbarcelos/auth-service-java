@@ -306,43 +306,31 @@ public class AuthInfrastructureUnitTest {
     @Test
     void testPermissionFilter_Exhaustive() {
         UserSession session = mock(UserSession.class);
-        com.app.modules.audit.AuditService audit = mock(com.app.modules.audit.AuditService.class);
 
-        // Use anonymous subclass to override Arc lookups
         PermissionFilter filter = new PermissionFilter("feat", "act") {
             @Override
             protected UserSession getUserSession() {
                 return session;
             }
-
-            @Override
-            protected com.app.modules.audit.AuditService getAuditService() {
-                return audit;
-            }
         };
 
         ContainerRequestContext ctx = mock(ContainerRequestContext.class);
 
-        // 1. Auth already aborted
         when(ctx.getProperty("auth_aborted")).thenReturn(true);
         filter.filter(ctx);
         verify(ctx, never()).abortWith(any());
 
-        // 2. No user session
         when(ctx.getProperty("auth_aborted")).thenReturn(false);
         when(session.getUser()).thenReturn(null);
         filter.filter(ctx);
         verify(ctx).abortWith(argThat(r -> r.getStatus() == 401));
 
-        // 3. Denied
         reset(ctx);
         when(session.getUser()).thenReturn(Map.of("uid", "u1"));
         when(session.hasPermission("feat", "act")).thenReturn(false);
         filter.filter(ctx);
         verify(ctx).abortWith(argThat(r -> r.getStatus() == 403));
-        verify(audit).log(anyString(), anyString(), anyString(), any(), any(), anyString());
 
-        // 4. Allowed
         reset(ctx);
         when(session.hasPermission("feat", "act")).thenReturn(true);
         filter.filter(ctx);
